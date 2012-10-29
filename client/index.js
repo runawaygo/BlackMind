@@ -1,12 +1,12 @@
 seajs.config({
 	base: './',
 	debug:true,
-  	preload: ['plugin-coffee', 'plugin-less']
+  	preload: ['plugin-coffee', 'plugin-less', 'plugin-text']
 });
 
 
 define(function(require) {
 	console.log('seajs start');
-	require('index.coffee');	
 	require('index.less');
+	require('app/app');	
 });

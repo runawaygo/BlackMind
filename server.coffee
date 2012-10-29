@@ -11,9 +11,6 @@ app = connect()
 .use(connect.session({ secret: 'superwolf' }))
 .use(connect.errorHandler({ dumpExceptions: true, showStack: true }))
 .use(connect.bodyParser())
-.listen(port)
-
-app
 .use('/', connect.static(__dirname + '/client/'))
 .use('/client', connect.static(__dirname + '/client/'))
-
+.listen(port)

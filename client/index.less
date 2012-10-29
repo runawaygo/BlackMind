@@ -1,5 +1,5 @@
-@import 'style/animate.css';
-@import 'style/css3.less';
+// @import 'style/animate.css';
+// @import 'style/css3.less';
 
 html,body,iframe{
 	width:100%;
@@ -8,9 +8,56 @@ html,body,iframe{
 
 body{
   position: relative;
-  padding-top: 90px;
+  padding-top: 40px;
   background-color: #fff;
   background-image: url(../img/grid-18px-masked.png);
-  background-repeat: repeat-x;
+  background-repeat: repeat;
   background-position: 0 40px;
+}
+
+#main-container{
+}
+.mind-map{
+	position:absolute;
+	margin-left:-50px;
+	margin-top:-20px;
+	left:50%;
+	top:50%;
+}
+
+
+.mind-node{
+	padding-top:0;
+	position:absolute;
+	min-width:300px;
+	.title{
+		display:inline-block;
+		min-width:100px;
+		max-width:300px;
+		color:purple;
+		font-size:20px;
+		font-weight:bolder;
+	}
+	.title-txt{
+		display:none;
+	}
+	.line{
+		pointer-events:none;
+		position: absolute;
+		background-size: 100% 100%;
+		z-index: -1;
+	}
+	.line.up{
+		background-image:url('img/line1.png');
+	}
+	.line.down{
+		background-image:url('img/line.png');	
+	}
+
+}
+
+.mind-node.editing{
+	.title-txt{
+		display:auto;
+	}
 }
