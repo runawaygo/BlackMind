@@ -31,8 +31,8 @@ body{
 	position:absolute;
 	min-width:300px;
 	.title{
+		border:3px solid transparent;
 		display:inline-block;
-		min-width:100px;
 		max-width:300px;
 		color:purple;
 		font-size:20px;
@@ -54,10 +54,14 @@ body{
 		background-image:url('img/line.png');	
 	}
 
+	&.active>.title{
+		border: 3px solid red;
+		border-radius:5px;
+	}
+	&.editing>.title-txt{
+		display:auto;
+	}	
 }
 
-.mind-node.editing{
-	.title-txt{
-		display:auto;
-	}
-}
+
+

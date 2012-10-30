@@ -2,6 +2,7 @@ define (require, exports)->
 	utility = require('./utl')
 	template = utility.template
 	nodeTemplateStr = require('./template/node.html')
+	EventBus = Backbone.Mediator
 	
 	class Node extends Backbone.Model
 		initialize:(data)->
@@ -13,13 +14,14 @@ define (require, exports)->
 			content: ''
 			font:
 				style:''
-				size: 14
-				color: '#000'
+				size: 20
+				color: 'purple'
 			offset:
 				x: 0
 				y: 0
 			order: 0
 			isRoot: false
+			isActive: false
 		addChild:(node)->
 			@children.add(node)
 			node.parent = @
@@ -36,6 +38,8 @@ define (require, exports)->
 			if not data
 				@root = new Node({isRoot:true}) 
 				@add @root
+				@active = @root
+				@root.set('isActive', true)
 			
 			@on('add', @setRoot)
 		model: Node
@@ -44,11 +48,30 @@ define (require, exports)->
 
 
 	class NodeView extends utility.BaseView
-		initialize:->
-			@model.children.on('add',@renderChild)
 		tagName: 'section'
 		template: _.template(nodeTemplateStr)
 		className: 'mind-node'
+		initialize:->
+			@model.children.on('add',@renderChild)
+			@model.on('change:isActive', @renderActive)
+		events:
+			'click .title': "active"
+
+		active:(e)=>
+			EventBus.pub('node:active')
+			@model.set('isActive',true)
+			e.stopPropagation()
+			@
+
+		renderActive:(node)=>
+			if @model.get('isActive')
+				@$el.addClass('active')
+				EventBus.subscribeOnce('node:active', =>
+					@model.set('isActive', false)
+				)
+			else 
+				@$el.removeClass('active')
+			@
 		renderChild:(node)=>
 			nodeView = new NodeView({model:node})
 			@$el.append(nodeView.render().el)
@@ -56,14 +79,22 @@ define (require, exports)->
 		renderChildren:=>
 			@renderChild(node) for node in @model.children.models
 			@
-		render:=>
-			@$el.html @template(@model.toJSON())
+		renderContainer:->
 			offset = @model.get('offset')
 			@$el.css({
 				top:offset.y
 				left:offset.x
 			})
-
+			@
+		renderTitle:->
+			font = @model.get('font')
+			@$el.find('div.title').css({
+				"font-size": font.size
+				"color": font.color
+			})
+			@
+		renderLine:->
+			offset = @model.get('offset')
 			@$el.find('div.line').css({
 				width:  Math.abs(offset.x)
 				height: Math.abs(offset.y)
@@ -73,7 +104,13 @@ define (require, exports)->
 			.removeClass('up')
 			.removeClass('down')
 			.addClass(if offset.y>0 then 'down' else 'up')
-
+			@
+		render:=>
+			@$el.html @template(@model.toJSON())
+			@renderContainer()
+				.renderTitle()
+				.renderLine()
+				.renderActive()
 
 			@renderChildren()
 			@
@@ -83,10 +120,6 @@ define (require, exports)->
 		initialize:->
 		tagName: 'div'
 		className: 'mind-map'
-		# renderNode:(node)=>
-		# 	nodeView = new NodeView({model:node})
-		# 	@$el.append(nodeView.render().el)
-		# 	@
 		render:=>
 			nodeView = new NodeView({model:@model.root})
 			@$el.html(nodeView.render().el)
@@ -131,7 +164,6 @@ define (require, exports)->
 
 	$(->
 		new App().start()
-
 	)
   	
 	exports

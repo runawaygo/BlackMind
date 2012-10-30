@@ -5,10 +5,11 @@
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
   define(function(require, exports) {
-    var App, AppModel, AppView, Map, MapView, Node, NodeCollection, NodeView, nodeTemplateStr, template, utility;
+    var App, AppModel, AppView, EventBus, Map, MapView, Node, NodeCollection, NodeView, nodeTemplateStr, template, utility;
     utility = require('./utl');
     template = utility.template;
     nodeTemplateStr = require('./template/node.html');
+    EventBus = Backbone.Mediator;
     Node = (function(_super) {
 
       __extends(Node, _super);
@@ -30,15 +31,16 @@
         content: '',
         font: {
           style: '',
-          size: 14,
-          color: '#000'
+          size: 20,
+          color: 'purple'
         },
         offset: {
           x: 0,
           y: 0
         },
         order: 0,
-        isRoot: false
+        isRoot: false,
+        isActive: false
       };
 
       Node.prototype.addChild = function(node) {
@@ -84,6 +86,8 @@
             isRoot: true
           });
           this.add(this.root);
+          this.active = this.root;
+          this.root.set('isActive', true);
         }
         return this.on('add', this.setRoot);
       };
@@ -109,18 +113,47 @@
         this.renderChildren = __bind(this.renderChildren, this);
 
         this.renderChild = __bind(this.renderChild, this);
+
+        this.renderActive = __bind(this.renderActive, this);
+
+        this.active = __bind(this.active, this);
         return NodeView.__super__.constructor.apply(this, arguments);
       }
-
-      NodeView.prototype.initialize = function() {
-        return this.model.children.on('add', this.renderChild);
-      };
 
       NodeView.prototype.tagName = 'section';
 
       NodeView.prototype.template = _.template(nodeTemplateStr);
 
       NodeView.prototype.className = 'mind-node';
+
+      NodeView.prototype.initialize = function() {
+        this.model.children.on('add', this.renderChild);
+        return this.model.on('change:isActive', this.renderActive);
+      };
+
+      NodeView.prototype.events = {
+        'click .title': "active"
+      };
+
+      NodeView.prototype.active = function(e) {
+        EventBus.pub('node:active');
+        this.model.set('isActive', true);
+        e.stopPropagation();
+        return this;
+      };
+
+      NodeView.prototype.renderActive = function(node) {
+        var _this = this;
+        if (this.model.get('isActive')) {
+          this.$el.addClass('active');
+          EventBus.subscribeOnce('node:active', function() {
+            return _this.model.set('isActive', false);
+          });
+        } else {
+          this.$el.removeClass('active');
+        }
+        return this;
+      };
 
       NodeView.prototype.renderChild = function(node) {
         var nodeView;
@@ -141,20 +174,41 @@
         return this;
       };
 
-      NodeView.prototype.render = function() {
+      NodeView.prototype.renderContainer = function() {
         var offset;
-        this.$el.html(this.template(this.model.toJSON()));
         offset = this.model.get('offset');
         this.$el.css({
           top: offset.y,
           left: offset.x
         });
+        return this;
+      };
+
+      NodeView.prototype.renderTitle = function() {
+        var font;
+        font = this.model.get('font');
+        this.$el.find('div.title').css({
+          "font-size": font.size,
+          "color": font.color
+        });
+        return this;
+      };
+
+      NodeView.prototype.renderLine = function() {
+        var offset;
+        offset = this.model.get('offset');
         this.$el.find('div.line').css({
           width: Math.abs(offset.x),
           height: Math.abs(offset.y),
           left: offset.x > 0 ? -offset.x : 0,
           top: offset.y > 0 ? -offset.y : 0
         }).removeClass('up').removeClass('down').addClass(offset.y > 0 ? 'down' : 'up');
+        return this;
+      };
+
+      NodeView.prototype.render = function() {
+        this.$el.html(this.template(this.model.toJSON()));
+        this.renderContainer().renderTitle().renderLine().renderActive();
         this.renderChildren();
         return this;
       };
