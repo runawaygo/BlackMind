@@ -193,7 +193,15 @@
      * Shortcut for subscribe
      * @function
      */
-    sub: Backbone.Mediator.subscribe
+    sub: Backbone.Mediator.subscribe,
+
+    trigger: Backbone.Mediator.publish,
+
+    on: Backbone.Mediator.subscribe,
+
+    off: Backbone.Mediator.unsubscribe,
+
+    once: Backbone.Mediator.subscribeOnce
   });
 
   return Backbone;

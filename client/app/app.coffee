@@ -27,6 +27,16 @@ define (require, exports)->
 			node.parent = @
 			node.set('depth', @get('depth')+1)
 			@
+		getAbsoluteOffset:->
+			result = {x:0,y:0}
+			tempNode = @
+			while tempNode
+				pOffset = tempNode.get('offset')
+				result.x += pOffset.x
+				result.y += pOffset.y
+				tempNode = tempNode.parent
+
+			result
 
 	class NodeCollection extends Backbone.Collection
 		initialize:->
@@ -42,9 +52,21 @@ define (require, exports)->
 				@root.set('isActive', true)
 			
 			@on('add', @setRoot)
+			EventBus.on('node:active', (node)=>@active=node)
+
 		model: Node
+		addAt:(absoluteOffset)=>
+			pAbsoluteOffset = @active.getAbsoluteOffset()
+			console.log absoluteOffset
+			console.log pAbsoluteOffset
+			@add new Node
+					offset:
+						x: absoluteOffset.x - pAbsoluteOffset.x
+						y: absoluteOffset.y - pAbsoluteOffset.y
+
+
 		setRoot:(node)->
-			@root.addChild(node)
+			@active.addChild(node)
 
 
 	class NodeView extends utility.BaseView
@@ -58,15 +80,17 @@ define (require, exports)->
 			'click .title': "active"
 
 		active:(e)=>
-			EventBus.pub('node:active')
-			@model.set('isActive',true)
 			e.stopPropagation()
+			if @model.get('isActive') then return @
+
+			EventBus.trigger('node:active', @model)
+			@model.set('isActive',true)
 			@
 
 		renderActive:(node)=>
 			if @model.get('isActive')
 				@$el.addClass('active')
-				EventBus.subscribeOnce('node:active', =>
+				EventBus.once('node:active', =>
 					@model.set('isActive', false)
 				)
 			else 
@@ -103,7 +127,7 @@ define (require, exports)->
 			})
 			.removeClass('up')
 			.removeClass('down')
-			.addClass(if offset.y>0 then 'down' else 'up')
+			.addClass(if offset.y*offset.x>0 then 'down' else 'up')
 			@
 		render:=>
 			@$el.html @template(@model.toJSON())
@@ -118,8 +142,18 @@ define (require, exports)->
 	
 	class MapView extends utility.BaseView
 		initialize:->
+			@initEvent()
+		$container:$('#main-container')
 		tagName: 'div'
 		className: 'mind-map'
+		initEvent:->
+			@$container.on('dblclick', (e)=>
+				x = e.clientX-@$container.width()/2+50
+				y = e.clientY-@$container.height()/2+20
+				@model.addAt({x:x,y:y})
+			)
+			@
+
 		render:=>
 			nodeView = new NodeView({model:@model.root})
 			@$el.html(nodeView.render().el)

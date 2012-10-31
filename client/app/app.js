@@ -50,6 +50,22 @@
         return this;
       };
 
+      Node.prototype.getAbsoluteOffset = function() {
+        var pOffset, result, tempNode;
+        result = {
+          x: 0,
+          y: 0
+        };
+        tempNode = this;
+        while (tempNode) {
+          pOffset = tempNode.get('offset');
+          result.x += pOffset.x;
+          result.y += pOffset.y;
+          tempNode = tempNode.parent;
+        }
+        return result;
+      };
+
       return Node;
 
     })(Backbone.Model);
@@ -77,10 +93,12 @@
       Map.name = 'Map';
 
       function Map() {
+        this.addAt = __bind(this.addAt, this);
         return Map.__super__.constructor.apply(this, arguments);
       }
 
       Map.prototype.initialize = function(data) {
+        var _this = this;
         if (!data) {
           this.root = new Node({
             isRoot: true
@@ -89,13 +107,29 @@
           this.active = this.root;
           this.root.set('isActive', true);
         }
-        return this.on('add', this.setRoot);
+        this.on('add', this.setRoot);
+        return EventBus.on('node:active', function(node) {
+          return _this.active = node;
+        });
       };
 
       Map.prototype.model = Node;
 
+      Map.prototype.addAt = function(absoluteOffset) {
+        var pAbsoluteOffset;
+        pAbsoluteOffset = this.active.getAbsoluteOffset();
+        console.log(absoluteOffset);
+        console.log(pAbsoluteOffset);
+        return this.add(new Node({
+          offset: {
+            x: absoluteOffset.x - pAbsoluteOffset.x,
+            y: absoluteOffset.y - pAbsoluteOffset.y
+          }
+        }));
+      };
+
       Map.prototype.setRoot = function(node) {
-        return this.root.addChild(node);
+        return this.active.addChild(node);
       };
 
       return Map;
@@ -136,9 +170,10 @@
       };
 
       NodeView.prototype.active = function(e) {
-        EventBus.pub('node:active');
-        this.model.set('isActive', true);
         e.stopPropagation();
+        if (this.model.get('isActive')) return this;
+        EventBus.trigger('node:active', this.model);
+        this.model.set('isActive', true);
         return this;
       };
 
@@ -146,7 +181,7 @@
         var _this = this;
         if (this.model.get('isActive')) {
           this.$el.addClass('active');
-          EventBus.subscribeOnce('node:active', function() {
+          EventBus.once('node:active', function() {
             return _this.model.set('isActive', false);
           });
         } else {
@@ -202,7 +237,7 @@
           height: Math.abs(offset.y),
           left: offset.x > 0 ? -offset.x : 0,
           top: offset.y > 0 ? -offset.y : 0
-        }).removeClass('up').removeClass('down').addClass(offset.y > 0 ? 'down' : 'up');
+        }).removeClass('up').removeClass('down').addClass(offset.y * offset.x > 0 ? 'down' : 'up');
         return this;
       };
 
@@ -227,11 +262,29 @@
         return MapView.__super__.constructor.apply(this, arguments);
       }
 
-      MapView.prototype.initialize = function() {};
+      MapView.prototype.initialize = function() {
+        return this.initEvent();
+      };
+
+      MapView.prototype.$container = $('#main-container');
 
       MapView.prototype.tagName = 'div';
 
       MapView.prototype.className = 'mind-map';
+
+      MapView.prototype.initEvent = function() {
+        var _this = this;
+        this.$container.on('dblclick', function(e) {
+          var x, y;
+          x = e.clientX - _this.$container.width() / 2 + 50;
+          y = e.clientY - _this.$container.height() / 2 + 20;
+          return _this.model.addAt({
+            x: x,
+            y: y
+          });
+        });
+        return this;
+      };
 
       MapView.prototype.render = function() {
         var nodeView;
