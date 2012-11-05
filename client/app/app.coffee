@@ -57,8 +57,6 @@ define (require, exports)->
 		model: Node
 		addAt:(absoluteOffset)=>
 			pAbsoluteOffset = @active.getAbsoluteOffset()
-			console.log absoluteOffset
-			console.log pAbsoluteOffset
 			@add new Node
 					offset:
 						x: absoluteOffset.x - pAbsoluteOffset.x
@@ -73,11 +71,17 @@ define (require, exports)->
 		tagName: 'section'
 		template: _.template(nodeTemplateStr)
 		className: 'mind-node'
+		events:
+			'click .title': 'active'
+			'mousedown .title': 'startDrag'
+
 		initialize:->
 			@model.children.on('add',@renderChild)
 			@model.on('change:isActive', @renderActive)
-		events:
-			'click .title': "active"
+			@model.on('change:offset', @setPosition)
+
+			$('#main-container').on('mousemove',@moveDrag)
+			$('#main-container').on('mouseup',@endDrag)
 
 		active:(e)=>
 			e.stopPropagation()
@@ -86,7 +90,37 @@ define (require, exports)->
 			EventBus.trigger('node:active', @model)
 			@model.set('isActive',true)
 			@
+		startDrag:(e)=>
+			point = e.touches?[0] ? e
+			@startX = @lastX = point.clientX
+			@startY = @lastY = point.clientY
+			@dragging = true
+			e.stopPropagation()
+			@
+		moveDrag:(e)=>
+			if not @dragging then return
+			@$el.addClass('dragging')
 
+			point = e.touches?[0] ? e
+			@lastX = point.clientX
+			@lastY = point.clientY
+			@$el.css('-webkit-transform', 'translate3d(' +(@lastX-@startX)+ 'px,'+(@lastY-@startY)+'px, 0) scale(1.05)')
+			e.stopPropagation()
+			@
+		endDrag:(e)=>
+			if not @dragging then return
+			@$el.removeClass('dragging')
+			@dragging = false
+			@$el.css('-webkit-transform', '')
+
+			offset = @model.get('offset')
+			@model.set(
+				offset:
+					x: offset.x + @lastX - @startX
+					y: offset.y + @lastY - @startY
+			)
+			e.stopPropagation()
+			@
 		renderActive:(node)=>
 			if @model.get('isActive')
 				@$el.addClass('active')
@@ -103,7 +137,10 @@ define (require, exports)->
 		renderChildren:=>
 			@renderChild(node) for node in @model.children.models
 			@
-		renderContainer:->
+		setPosition:=>
+			@renderContainer().renderLine()
+			@
+		renderContainer:=>
 			offset = @model.get('offset')
 			@$el.css({
 				top:offset.y
@@ -112,14 +149,14 @@ define (require, exports)->
 			@
 		renderTitle:->
 			font = @model.get('font')
-			@$el.find('div.title').css({
+			@$el.find('div.title').first().css({
 				"font-size": font.size
 				"color": font.color
 			})
 			@
 		renderLine:->
 			offset = @model.get('offset')
-			@$el.find('div.line').css({
+			@$el.find('div.line').first().css({
 				width:  Math.abs(offset.x)
 				height: Math.abs(offset.y)
 				left: if offset.x>0 then -offset.x else 0

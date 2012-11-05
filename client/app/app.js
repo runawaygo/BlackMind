@@ -118,8 +118,6 @@
       Map.prototype.addAt = function(absoluteOffset) {
         var pAbsoluteOffset;
         pAbsoluteOffset = this.active.getAbsoluteOffset();
-        console.log(absoluteOffset);
-        console.log(pAbsoluteOffset);
         return this.add(new Node({
           offset: {
             x: absoluteOffset.x - pAbsoluteOffset.x,
@@ -144,11 +142,21 @@
       function NodeView() {
         this.render = __bind(this.render, this);
 
+        this.renderContainer = __bind(this.renderContainer, this);
+
+        this.setPosition = __bind(this.setPosition, this);
+
         this.renderChildren = __bind(this.renderChildren, this);
 
         this.renderChild = __bind(this.renderChild, this);
 
         this.renderActive = __bind(this.renderActive, this);
+
+        this.endDrag = __bind(this.endDrag, this);
+
+        this.moveDrag = __bind(this.moveDrag, this);
+
+        this.startDrag = __bind(this.startDrag, this);
 
         this.active = __bind(this.active, this);
         return NodeView.__super__.constructor.apply(this, arguments);
@@ -160,13 +168,17 @@
 
       NodeView.prototype.className = 'mind-node';
 
-      NodeView.prototype.initialize = function() {
-        this.model.children.on('add', this.renderChild);
-        return this.model.on('change:isActive', this.renderActive);
+      NodeView.prototype.events = {
+        'click .title': 'active',
+        'mousedown .title': 'startDrag'
       };
 
-      NodeView.prototype.events = {
-        'click .title': "active"
+      NodeView.prototype.initialize = function() {
+        this.model.children.on('add', this.renderChild);
+        this.model.on('change:isActive', this.renderActive);
+        this.model.on('change:offset', this.setPosition);
+        $('#main-container').on('mousemove', this.moveDrag);
+        return $('#main-container').on('mouseup', this.endDrag);
       };
 
       NodeView.prototype.active = function(e) {
@@ -174,6 +186,45 @@
         if (this.model.get('isActive')) return this;
         EventBus.trigger('node:active', this.model);
         this.model.set('isActive', true);
+        return this;
+      };
+
+      NodeView.prototype.startDrag = function(e) {
+        var point, _ref, _ref2;
+        point = (_ref = (_ref2 = e.touches) != null ? _ref2[0] : void 0) != null ? _ref : e;
+        this.startX = this.lastX = point.clientX;
+        this.startY = this.lastY = point.clientY;
+        this.dragging = true;
+        e.stopPropagation();
+        return this;
+      };
+
+      NodeView.prototype.moveDrag = function(e) {
+        var point, _ref, _ref2;
+        if (!this.dragging) return;
+        this.$el.addClass('dragging');
+        point = (_ref = (_ref2 = e.touches) != null ? _ref2[0] : void 0) != null ? _ref : e;
+        this.lastX = point.clientX;
+        this.lastY = point.clientY;
+        this.$el.css('-webkit-transform', 'translate3d(' + (this.lastX - this.startX) + 'px,' + (this.lastY - this.startY) + 'px, 0) scale(1.05)');
+        e.stopPropagation();
+        return this;
+      };
+
+      NodeView.prototype.endDrag = function(e) {
+        var offset;
+        if (!this.dragging) return;
+        this.$el.removeClass('dragging');
+        this.dragging = false;
+        this.$el.css('-webkit-transform', '');
+        offset = this.model.get('offset');
+        this.model.set({
+          offset: {
+            x: offset.x + this.lastX - this.startX,
+            y: offset.y + this.lastY - this.startY
+          }
+        });
+        e.stopPropagation();
         return this;
       };
 
@@ -209,6 +260,11 @@
         return this;
       };
 
+      NodeView.prototype.setPosition = function() {
+        this.renderContainer().renderLine();
+        return this;
+      };
+
       NodeView.prototype.renderContainer = function() {
         var offset;
         offset = this.model.get('offset');
@@ -222,7 +278,7 @@
       NodeView.prototype.renderTitle = function() {
         var font;
         font = this.model.get('font');
-        this.$el.find('div.title').css({
+        this.$el.find('div.title').first().css({
           "font-size": font.size,
           "color": font.color
         });
@@ -232,7 +288,7 @@
       NodeView.prototype.renderLine = function() {
         var offset;
         offset = this.model.get('offset');
-        this.$el.find('div.line').css({
+        this.$el.find('div.line').first().css({
           width: Math.abs(offset.x),
           height: Math.abs(offset.y),
           left: offset.x > 0 ? -offset.x : 0,

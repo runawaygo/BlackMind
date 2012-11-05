@@ -47,12 +47,12 @@ body{
 		position: absolute;
 		background-size: 100% 100%;
 		z-index: -1;
-	}
-	.line.up{
-		background-image:url('img/line1.png');
-	}
-	.line.down{
-		background-image:url('img/line.png');	
+		&.up{
+			background-image:url('img/line1.png');	
+		}
+		&.down{
+			background-image:url('img/line.png');	
+		}
 	}
 
 	&.active>.title{
@@ -61,7 +61,10 @@ body{
 	}
 	&.editing>.title-txt{
 		display:auto;
-	}	
+	}
+	&.dragging>.line{
+		display: none;
+	}
 }
 
 
