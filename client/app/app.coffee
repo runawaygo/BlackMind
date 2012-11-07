@@ -155,16 +155,32 @@ define (require, exports)->
 			})
 			@
 		renderLine:->
+			# offset = @model.get('offset')
+			# @$el.find('div.line').first().css({
+			# 	width:  Math.abs(offset.x)
+			# 	height: Math.abs(offset.y)
+			# 	left: if offset.x>0 then -offset.x else 0
+			# 	top: if offset.y>0 then -offset.y else 0
+			# })
+			# .removeClass('up')
+			# .removeClass('down')
+			# .addClass(if offset.y*offset.x>0 then 'down' else 'up')
+			line = @$el.find('div.line').first()
+			console.log line
+			if not @paper
+				paper = Raphael(0,0,0,0)
+				line.append(paper.canvas)
+
 			offset = @model.get('offset')
-			@$el.find('div.line').first().css({
-				width:  Math.abs(offset.x)
-				height: Math.abs(offset.y)
+			line.css({
 				left: if offset.x>0 then -offset.x else 0
 				top: if offset.y>0 then -offset.y else 0
 			})
-			.removeClass('up')
-			.removeClass('down')
-			.addClass(if offset.y*offset.x>0 then 'down' else 'up')
+			paper.setSize(Math.abs(offset.x), Math.abs(offset.y))
+
+			circle = paper.circle(50, 40, 10)
+			circle.attr("fill", "#f00")
+			circle.attr("stroke", "#fff")
 			@
 		render:=>
 			@$el.html @template(@model.toJSON())

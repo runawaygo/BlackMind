@@ -286,14 +286,22 @@
       };
 
       NodeView.prototype.renderLine = function() {
-        var offset;
+        var circle, line, offset, paper;
+        line = this.$el.find('div.line').first();
+        console.log(line);
+        if (!this.paper) {
+          paper = Raphael(0, 0, 0, 0);
+          line.append(paper.canvas);
+        }
         offset = this.model.get('offset');
-        this.$el.find('div.line').first().css({
-          width: Math.abs(offset.x),
-          height: Math.abs(offset.y),
+        line.css({
           left: offset.x > 0 ? -offset.x : 0,
           top: offset.y > 0 ? -offset.y : 0
-        }).removeClass('up').removeClass('down').addClass(offset.y * offset.x > 0 ? 'down' : 'up');
+        });
+        paper.setSize(Math.abs(offset.x), Math.abs(offset.y));
+        circle = paper.circle(50, 40, 10);
+        circle.attr("fill", "#f00");
+        circle.attr("stroke", "#fff");
         return this;
       };
 
