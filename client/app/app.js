@@ -21,8 +21,11 @@
       }
 
       Node.prototype.initialize = function(data) {
-        if (!data.id) data.id = utility.createUUID();
-        if (data.isRoot) data.depth = 0;
+        if (!data.id) {
+          this.id = utility.createUUID();
+          this.set('id', this.id);
+        }
+        if (data.isRoot) this.set('depth', 0);
         return this.children = new NodeCollection;
       };
 
@@ -142,6 +145,8 @@
       function NodeView() {
         this.render = __bind(this.render, this);
 
+        this.changeTitle = __bind(this.changeTitle, this);
+
         this.renderContainer = __bind(this.renderContainer, this);
 
         this.setPosition = __bind(this.setPosition, this);
@@ -158,7 +163,11 @@
 
         this.startDrag = __bind(this.startDrag, this);
 
+        this.editing = __bind(this.editing, this);
+
         this.active = __bind(this.active, this);
+
+        this.keydown = __bind(this.keydown, this);
         return NodeView.__super__.constructor.apply(this, arguments);
       }
 
@@ -170,6 +179,7 @@
 
       NodeView.prototype.events = {
         'click .title': 'active',
+        'dblclick': 'editing',
         'mousedown .title': 'startDrag'
       };
 
@@ -177,8 +187,24 @@
         this.model.children.on('add', this.renderChild);
         this.model.on('change:isActive', this.renderActive);
         this.model.on('change:offset', this.setPosition);
+        this.model.on('change:title', this.changeTitle);
         $('#main-container').on('mousemove', this.moveDrag);
-        return $('#main-container').on('mouseup', this.endDrag);
+        $('#main-container').on('mouseup', this.endDrag);
+        return this.$el.delegate('#title-txt-' + this.model.get('id'), 'keydown', this.keydown);
+      };
+
+      NodeView.prototype.keydown = function(e) {
+        console.log(e.keyCode);
+        console.log(e);
+        switch (e.keyCode) {
+          case 13:
+            this.model.set('title', e.srcElement.value);
+            this.$el.removeClass('editing');
+            break;
+          case 27:
+            this.$el.removeClass('editing');
+        }
+        return this;
       };
 
       NodeView.prototype.active = function(e) {
@@ -186,6 +212,13 @@
         if (this.model.get('isActive')) return this;
         EventBus.trigger('node:active', this.model);
         this.model.set('isActive', true);
+        return this;
+      };
+
+      NodeView.prototype.editing = function(e) {
+        this.$el.addClass('editing');
+        this.$el.find('input').first().focus();
+        e.stopPropagation();
         return this;
       };
 
@@ -233,7 +266,8 @@
         if (this.model.get('isActive')) {
           this.$el.addClass('active');
           EventBus.once('node:active', function() {
-            return _this.model.set('isActive', false);
+            _this.model.set('isActive', false);
+            return _this.$el.removeClass('editing');
           });
         } else {
           this.$el.removeClass('active');
@@ -275,6 +309,12 @@
         return this;
       };
 
+      NodeView.prototype.changeTitle = function() {
+        this.$el.find('#title-txt-' + this.model.id).val(this.model.get('title'));
+        this.$el.find('#title-' + this.model.id).html(this.model.get('title'));
+        return this;
+      };
+
       NodeView.prototype.renderTitle = function() {
         var font;
         font = this.model.get('font');
@@ -286,9 +326,8 @@
       };
 
       NodeView.prototype.renderLine = function() {
-        var circle, line, offset, paper;
+        var line, offset, paper;
         line = this.$el.find('div.line').first();
-        console.log(line);
         if (!this.paper) {
           paper = Raphael(0, 0, 0, 0);
           line.append(paper.canvas);
@@ -299,9 +338,7 @@
           top: offset.y > 0 ? -offset.y : 0
         });
         paper.setSize(Math.abs(offset.x), Math.abs(offset.y));
-        circle = paper.circle(50, 40, 10);
-        circle.attr("fill", "#f00");
-        circle.attr("stroke", "#fff");
+        paper.path("M0 0L100 100");
         return this;
       };
 

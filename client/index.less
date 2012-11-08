@@ -40,13 +40,15 @@ body{
 	padding-top:0;
 	position:absolute;
 	min-width:300px;
-	.title{
+	.title, .title-txt{
 		border:3px solid transparent;
-		display:inline-block;
 		max-width:300px;
 		color:purple;
 		font-size:20px;
 		font-weight:bolder;
+	}
+	.title{
+		display:inline-block;
 	}
 	.title-txt{
 		display:none;
@@ -63,7 +65,12 @@ body{
 			background-image:url('img/line.png');	
 		}
 	}
-
+	&.editing>.title{
+		display: none;	
+	}
+	&.editing>.title-txt{
+		display:inline-block;
+	}
 	&.active>.title{
 		border: 3px solid red;
 		border-radius:5px;

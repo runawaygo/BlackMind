@@ -6,8 +6,12 @@ define (require, exports)->
 	
 	class Node extends Backbone.Model
 		initialize:(data)->
-			if not data.id then data.id = utility.createUUID()
-			if data.isRoot then data.depth = 0
+			if not data.id
+				@id = utility.createUUID()
+				@set('id', @id)
+			if data.isRoot
+				@set('depth', 0)
+
 			@children = new NodeCollection
 		defaults:
 			title: 'New Idea'
@@ -73,15 +77,31 @@ define (require, exports)->
 		className: 'mind-node'
 		events:
 			'click .title': 'active'
+			'dblclick': 'editing'
 			'mousedown .title': 'startDrag'
 
 		initialize:->
 			@model.children.on('add',@renderChild)
 			@model.on('change:isActive', @renderActive)
 			@model.on('change:offset', @setPosition)
+			@model.on('change:title', @changeTitle)
 
 			$('#main-container').on('mousemove',@moveDrag)
 			$('#main-container').on('mouseup',@endDrag)
+			@$el.delegate('#title-txt-'+@model.get('id'), 'keydown', @keydown)
+
+
+		keydown:(e)=>
+			console.log e.keyCode
+			console.log e
+			switch e.keyCode
+				when 13
+					@model.set('title', e.srcElement.value)
+					@$el.removeClass('editing')
+				when 27
+					@$el.removeClass('editing')
+
+			@
 
 		active:(e)=>
 			e.stopPropagation()
@@ -89,6 +109,11 @@ define (require, exports)->
 
 			EventBus.trigger('node:active', @model)
 			@model.set('isActive',true)
+			@
+		editing:(e)=>
+			@$el.addClass('editing')
+			@$el.find('input').first().focus()
+			e.stopPropagation()
 			@
 		startDrag:(e)=>
 			point = e.touches?[0] ? e
@@ -126,6 +151,7 @@ define (require, exports)->
 				@$el.addClass('active')
 				EventBus.once('node:active', =>
 					@model.set('isActive', false)
+					@$el.removeClass('editing')
 				)
 			else 
 				@$el.removeClass('active')
@@ -147,6 +173,10 @@ define (require, exports)->
 				left:offset.x
 			})
 			@
+		changeTitle:=>
+			@$el.find('#title-txt-'+@model.id).val(@model.get('title'))
+			@$el.find('#title-'+@model.id).html(@model.get('title'))
+			@
 		renderTitle:->
 			font = @model.get('font')
 			@$el.find('div.title').first().css({
@@ -166,7 +196,6 @@ define (require, exports)->
 			# .removeClass('down')
 			# .addClass(if offset.y*offset.x>0 then 'down' else 'up')
 			line = @$el.find('div.line').first()
-			console.log line
 			if not @paper
 				paper = Raphael(0,0,0,0)
 				line.append(paper.canvas)
@@ -178,9 +207,9 @@ define (require, exports)->
 			})
 			paper.setSize(Math.abs(offset.x), Math.abs(offset.y))
 
-			circle = paper.circle(50, 40, 10)
-			circle.attr("fill", "#f00")
-			circle.attr("stroke", "#fff")
+			paper.path("M0 0L100 100");
+			# circle.attr("fill", "#f00")
+			# circle.attr("stroke", "#fff")
 			@
 		render:=>
 			@$el.html @template(@model.toJSON())
